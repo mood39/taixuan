@@ -117,7 +117,7 @@ footer .bad{color:#e08b84}
 <!-- ════════ 配曆 ════════ -->
 <section class="tab" id="tab-li">
   <div class="card">
-    <h2>事時（東八區民用時）</h2>
+    <h2>事時（東八區民用時，可啟真太陽時修正）</h2>
     <div class="row">
       <input type="number" id="liY" min="1" max="2200" value="2026">年
       <select id="liM"></select>月
@@ -125,6 +125,11 @@ footer .bad{color:#e08b84}
       <select id="liH"></select>時
       <select id="liMin"></select>分
       <button class="mini" id="btnNow">取此刻</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label style="font-size:14px"><input type="checkbox" id="tstChk" checked> 真太陽時修正</label>
+      經度 <input type="number" id="lonInp" value="121.5" step="0.1" min="-180" max="180">
+      <button class="mini" id="locBtn">定位</button>
     </div>
     <div style="text-align:center;margin-top:12px"><button class="act" id="btnLi">推　演</button></div>
   </div>
@@ -152,6 +157,7 @@ footer .bad{color:#e08b84}
     <p>【文本庫】白文據維基文庫《太玄經》全帙（81首辭、729贊、729測、踦贏二贊）。謄錄之異逐條修正並明示：首48起「上九」多作「次九」（35處，一律歸上九）；禮次二「側曰」校「測曰」；達次二贊測連書、補「測曰」界；衆上九「測曰，」逗號並去引號。文義一仍其舊，不作校改。</p>
     <p>【擬卦】全81首已錄，雙源合校：主據《集注太玄經》經文各首下注（「某家某行，準／亦準某卦」，𝌆首標行錨定，得70條），佚卷處以卷十附《太玄曆》總表補足（異體歸一：決＝夬、遁＝遯、涣＝渙、歸昧＝歸妹）。結構驗證全數成立：亦準之首悉承前首同卦（如疑承飾之賁、沈承視之觀）；擬卦凡用六十卦、二十一卦各得二首、坎離震兌四正不入——與《易》卦氣次序之說全面相符。經注70條驗五行 mod 9 公式全合；陰陽家奇偶公式69/70，唯瞢（68）注作「陽家」與通例乖，本引擎循通例作陰家、存疑備考。</p>
     <p>【校記】雙源歧異三處，悉從經注：永準同人（曆作「節」，涉上「度：節」而衍；注引吳氏期日之考，且昆首「亦準同人」正承永言）；疑亦準賁、沈亦準觀（曆該段訛舛一位；注明言「彼飾此疑矣」「沈，下視也」，亦準鏈可證）。永之準卦另有異說（注記「二宋、陸、范、王皆象恆」），飾兼準兌（秋分故也），並存備考。</p>
+    <p>【真太陽時】標配開關（預設啟）：修正＝（經度−120°）×4分＋均時差（由太陽視赤經即時計算，非近似式，任意年份一致）；修正疊於事時後再行日界與晝夜贊判定，冬至錨定同步套用同一鐘面。太玄粒度為半日，修正僅於 06/18 時與子夜日界前後之邊界時段可能翻動一贊，餘時無感。經度預設 121.5，載入時嘗試裝置定位，另設定位鈕重取，失敗保留預設。</p>
     <p>【節氣與星次】節氣採定氣（真太陽視黃經每十五度為一氣），與冬至甲案一脈；卷十漢曆為平氣（每氣一千二百三十二分二十三秒均分），且雨水驚蟄、清明穀雨次序與今互換（曆注「驚蟄今日雨水」云云自明），故古表僅作寬容互驗（夏至應五、立秋入常次七等落點檢核），不作顯示依據。十二次據卷十宿度界表（星紀初斗十二度⋯）換算牛初度軸；斗建、律呂依曆注隨次映射（玄枵建丑律大呂⋯星紀建子律黃鐘）。</p>
     <p>【今譯】81首辭、729贊、踦贏二贊逐條今譯，以測辭定其義；今譯為引擎便覽而非古注，疑義處從寬直譯，原文恆居上位、今譯居下位，斷義請以原文與古注為準。</p>
     <p>【三表原理】卷八《玄數》許翰注補全：旦用經（一五七）、夕用緯（三四八）、旦夕之中二經一緯（二六九）；旦象天、夕象地、中象人。從違六局正名亦據此注。前版「待考司馬光集注」一項就此結案。</p>
@@ -160,7 +166,7 @@ footer .bad{color:#e08b84}
 
 </main>
 <footer>
-  <span>太玄引擎 v0.5 · mood39</span>
+  <span>太玄引擎 v0.6 · mood39</span>
   <span id="selfTest">自檢中⋯</span>
 </footer>
 
@@ -284,6 +290,14 @@ function sunLon(jd){ const T=(jd-2451545)/36525;
   let lon=L0+C-0.00569-0.00478*Math.sin(om);
   return ((lon%360)+360)%360; }
 function wrap180(x){return ((x+180)%360+360)%360-180;}
+function eotMin(jd){ // 均時差(分):視太陽時-平太陽時,由視赤經計算
+  const T=(jd-2451545)/36525, R=Math.PI/180;
+  const L0=((280.46646+36000.76983*T+0.0003032*T*T)%360+360)%360;
+  const lam=sunLon(jd)*R, eps=(23.4392911-0.0130042*T)*R;
+  const alpha=Math.atan2(Math.cos(eps)*Math.sin(lam),Math.cos(lam))/R;
+  return wrap180(L0-0.0057183-alpha)*4;
+}
+function tstMin(jd,lon){return (lon-120)*4+eotMin(jd);} // 真太陽時總修正(分)
 const _solCache={};
 function solsticeDN(year){ // 該年冬至之東八區民用日序號
   if(_solCache[year]!==undefined) return _solCache[year];
@@ -316,12 +330,23 @@ function ciOf(deg){
 }
 
 /* ══════════ 配曆 ══════════ */
-function calMap(y,mo,d,h){
-  let effDN=dnOf(y,mo,d), half;
-  if(h>=6&&h<18) half="晝"; else {half="夜"; if(h<6) effDN-=1;}
-  let ay=jd2g(effDN).y, anchor=solsticeDN(ay);
-  if(effDN<anchor){ay-=1;anchor=solsticeDN(ay);}
-  const next=solsticeDN(ay+1);
+function calMap(y,mo,d,h,mi=0,useTST=false,lon=121.5){
+  let dnq=dnOf(y,mo,d), hq=h+mi/60, corr=0;
+  if(useTST){
+    const jdU=dnq+(hq-12)/24-8/24;      // 民用事時之UTC JD
+    corr=tstMin(jdU,lon);
+    const jl=jdU+8/24+corr/1440;        // 真太陽鐘面
+    dnq=Math.floor(jl+0.5); hq=(jl+0.5-dnq)*24;
+  }
+  const off=useTST?corr:0;
+  let effDN=dnq, half;
+  if(hq>=6&&hq<18) half="晝"; else {half="夜"; if(hq<6) effDN-=1;}
+  const sdn=(yy)=>{let jd=g2jd(yy,12,21)+0.5;
+    for(let i=0;i<50;i++){const df=wrap180(270-sunLon(jd));if(Math.abs(df)<1e-7)break;jd+=df/0.9856474;}
+    return Math.floor(jd+8/24+(useTST?tstMin(jd,lon):0)/1440+0.5);};
+  let ay=jd2g(effDN).y, anchor=sdn(ay);
+  if(effDN<anchor){ay-=1;anchor=sdn(ay);}
+  const next=sdn(ay+1);
   const n=effDN-anchor, slot=2*n+(half==="晝"?1:2);
   let kind="首", shou=null, zan=null;
   if(slot<=729){shou=Math.ceil(slot/9);zan=((slot-1)%9)+1;}
@@ -330,10 +355,10 @@ function calMap(y,mo,d,h){
   // 日躔
   let xiu=null;
   if(n>=0&&n<365){let cum=0;for(const [nm,sp] of XIU28){if(n<cum+sp){xiu=nm+(Math.floor(n-cum)+1)+"度";break;}cum+=sp;}}
-  return {n,half,slot,kind,shou,zan,anchor,next,ay};
+  return {n,half,slot,kind,shou,zan,anchor,next,ay,corr:off,useTST,tstH:hq,tstDN:dnq};
 }
-function renderLi(y,mo,d,h,mi){
-  const r=calMap(y,mo,d,h);
+function renderLi(y,mo,d,h,mi,useTST,lon){
+  const r=calMap(y,mo,d,h,mi,useTST,lon);
   let core;
   if(r.kind==="首"){
     const strip=ZANNAME.map((z,i)=>`<span class="z${i+1===r.zan?" cur":""}">${z}</span>`).join("");
@@ -352,7 +377,8 @@ function renderLi(y,mo,d,h,mi){
   if(r.n>=0&&r.n<365){let cum=0;for(const [nm,sp] of XIU28){if(r.n<cum+sp){xiu=`日在${nm}宿第${Math.floor(r.n-cum)+1}度`;break;}cum+=sp;}}
   return core+`<div class="card"><h2>曆象</h2>
     <table class="plain">
-      <tr><th>錨定冬至</th><td>${dnToStr(r.anchor)}（真冬至·東八區）</td></tr>
+      <tr><th>錨定冬至</th><td>${dnToStr(r.anchor)}（真冬至·東八區${r.useTST?"·真太陽":""}）</td></tr>
+      ${r.useTST?`<tr><th>真太陽時</th><td>${dnToStr(r.tstDN)} ${String(Math.floor(r.tstH)).padStart(2,"0")}:${String(Math.floor(r.tstH%1*60)).padStart(2,"0")}（修正 ${r.corr>=0?"+":""}${r.corr.toFixed(1)} 分）</td></tr>`:""}
       <tr><th>距冬至</th><td>第 ${r.n+1} 日 · ${r.half}半日（贊序 ${r.slot}）</td></tr>
       ${xiu?`<tr><th>日躔</th><td class="classical">${xiu}</td></tr>`:""}
       <tr><th>節氣</th><td>${(q=>`${q.name}第${q.day}日`)(jieqiOf(r.anchor+r.n))}（定氣）</td></tr>
@@ -378,11 +404,19 @@ function setNow(){const t=new Date();$("#liY").value=t.getFullYear();
   fillSel("#liM",1,12,t.getMonth()+1);fillSel("#liD",1,31,t.getDate());
   fillSel("#liH",0,23,t.getHours());fillSel("#liMin",0,59,t.getMinutes());}
 setNow();
+$("#locBtn").addEventListener("click",()=>{
+  if(!navigator.geolocation){$("#locBtn").textContent="無定位";return;}
+  navigator.geolocation.getCurrentPosition(p=>{$("#lonInp").value=p.coords.longitude.toFixed(1);},
+    ()=>{$("#locBtn").textContent="定位失敗";setTimeout(()=>$("#locBtn").textContent="定位",1500);});
+});
+if(typeof navigator!=="undefined"&&navigator.geolocation)
+  navigator.geolocation.getCurrentPosition(p=>{$("#lonInp").value=p.coords.longitude.toFixed(1);},()=>{});
 $("#btnNow").addEventListener("click",setNow);
 $("#btnLi").addEventListener("click",()=>{
   const y=+$("#liY").value,m=+$("#liM").value,d=+$("#liD").value,h=+$("#liH").value,mi=+$("#liMin").value;
+  const useTST=$("#tstChk").checked, lon=+$("#lonInp").value||121.5;
   if(!(y>=1&&y<=2200)){$("#liOut").innerHTML='<div class="card"><p class="hint">年份須在 1〜2200 之間。</p></div>';return;}
-  $("#liOut").innerHTML=renderLi(y,m,d,h,mi);
+  $("#liOut").innerHTML=renderLi(y,m,d,h,mi,useTST,lon);
 });
 
 // 八十一首表
@@ -453,6 +487,12 @@ for(let n=1;n<=81;n++){
   T.push({name:"今譯81首辭全",ok:Object.keys(BYDB.s).length===81&&Object.values(BYDB.s).every(v=>v.c)});
   T.push({name:"今譯729贊全",ok:Object.values(BYDB.s).every(v=>v.z.length===9&&v.z.every(x=>x))});
   T.push({name:"今譯踦贏在",ok:!!(BYDB.q["踦"]&&BYDB.q["贏"])});
+  (function(){let mx=-99,mn=99;
+    for(let d=0;d<366;d+=2){const e=eotMin(2460676.5+d);if(e>mx)mx=e;if(e<mn)mn=e;}
+    T.push({name:"均時差年幅±10~20分",ok:mx>10&&mx<20&&mn<-10&&mn>-20,got:[mn.toFixed(1),mx.toFixed(1)]});
+    const a=calMap(2026,7,22,5,55,false,121.5), b=calMap(2026,7,22,5,55,true,150);
+    T.push({name:"真太陽修正可翻晝夜界",ok:a.half==="夜"&&b.half==="晝"&&b.corr>60});
+  })();
   const pass=T.filter(t=>t.ok).length;
   const el=$("#selfTest");
   el.textContent=`自檢 ${pass}/${T.length} 通過`;
